@@ -1,0 +1,539 @@
+local baseShell = shell
+local pwd = (baseShell and baseShell.dir()) or ''
+local binPaths = '.:/rom/programs'
+local programStack = { }
+local aliases = (baseShell and baseShell.aliases()) or { }
+
+local KEYS = {
+    TAB = 15,
+    ENTER = 28,
+    LCTRL = 29,
+    RCTRL = 157,
+    BACKSPACE = 14,
+    UP = 200,
+    DOWN = 208,
+    LEFT = 203,
+    RIGHT = 205
+}
+
+pathutils = { }
+function pathutils.isAbsolute(path)
+    return string.sub(path, 1, 1) == '/'
+end
+
+function pathutils.isHidden(path)
+    return string.sub(path, 1, 1) == '.'
+end
+
+function pathutils.normalizeAbsolutePath(path)
+    if string.sub(path, 1, 1) ~= '/' then
+        return '/' .. path
+    end
+    
+    return path
+end
+
+-- fs.combine-like function which doesn't mess with things too much
+function pathutils.combine(a, b)
+    if string.sub(a, -1) == '/' then
+        a = string.sub(a, 1, #a - 1)
+    end
+
+    if string.sub(b, 1, 1) == '/' then
+        b = string.sub(b, 2)
+    end
+
+    return a .. '/' .. b
+end
+
+-- normalize a path into a form with no trailing /
+function pathutils.normalize(path)
+    if string.sub(path, -1) == '/' then
+        return string.sub(path, 1, #path - 1)
+    end
+
+    return path
+end
+
+-- return directory part of a path
+function pathutils.dirpart(path)
+    -- special case for root
+    if path == '/' then
+        return '/'
+    end
+
+    local parts = { }
+    for p in string.gmatch(path, '[^/]+') do
+        table.insert(parts, p)
+    end
+    
+    local dir = nil
+
+    if string.sub(path, -1) == '/' then
+        dir = table.concat(parts, '/', 1, #parts)
+    else
+        dir = table.concat(parts, '/', 1, #parts - 1)
+    end
+
+    if string.sub(path, 1, 1) == '/' then
+        dir = '/' .. dir
+    end
+
+    return dir
+end
+
+-- return name part of a path
+function pathutils.namepart(path)
+    local parts = { }
+    for p in string.gmatch(path, '[^/]+') do
+        table.insert(parts, p)
+    end
+    
+    -- if the last item isn't followed by a /, then it's a name
+    if string.sub(path, -1) ~= '/' then
+        return parts[#parts]
+    end
+
+    -- otherwise there is no name part
+    return ''
+end
+
+-- splits nix style foo:bar:baz path string
+function pathutils.splitPathString(str)
+    local parts = { }
+    for p in string.gmatch(str, '[^:]+') do
+        table.insert(parts, p)
+    end
+
+    return parts
+end
+
+-- todo
+function escapeForPattern(text)
+    return text
+end
+
+-- expand path similar to glob
+function pathutils.expand(pwd, text)
+    -- always have slash for paths even with borky no-slash absolute paths
+    if string.sub(pwd, 1, 1) ~= '/' then
+        pwd = '/' .. pwd
+    end
+
+    -- if the path consists of a valid dir, change pwd into that so we can
+    -- correctly expand files from that dir
+    local pwdPath = pathutils.combine(pwd, pathutils.dirpart(text))
+    if pathutils.normalize(pwdPath) ~= pathutils.normalize(pwd) and fs.isDir(pwdPath) then
+        return pathutils.expand(pwdPath, pathutils.namepart(text))
+    end
+    --print('Expanding pwd: ' .. pwd .. ' text: ' .. text)
+
+    local pwdItems = fs.list(pwd)
+
+    local matches = { }
+    local patternText = string.gsub(text, '*', '.+')
+    if patternText == text then
+        -- if converting text into pattern did nothing,
+        -- then there were no globbing characters in it
+        return { }
+    end
+
+    -- begin by expanding from pwd
+    for _, v in ipairs(pwdItems) do
+        if string.match(v, '^' .. patternText) then
+            table.insert(matches, pathutils.combine(pwd, v))
+        end
+    end
+
+    return matches
+end
+
+--print(table.concat(pathutils.expand('/', '/'), ' '))
+--print(table.concat(pathutils.expand('/', '/rom'), ' '))
+--print(table.concat(pathutils.expand('/', '/rom/programs'), ' '))
+--print(table.concat(pathutils.expand('/', '/rom/'), ' '))
+--print(table.concat(pathutils.expand('/', '/rom/programs/'), ' '))
+--print(pathutils.dirpart('/rom/'))
+--print(pathutils.dirpart('/rom'))
+--print(pathutils.dirpart('rom'))
+--print(pathutils.dirpart('rom/'))
+--print(pathutils.namepart('/rom/'))
+
+-- for the builtin shell-related funcs to work, override
+-- the shell api for any applications that are being run
+local baseEnv = getfenv()
+
+local shcompat = { }
+
+if baseEnv.shell then
+    for k, v in pairs(baseEnv.shell) do
+        shcompat[k] = v
+    end
+end
+
+shcompat.resolve = function(path)
+    if pathutils.isAbsolute(path) then
+        return fs.combine('', path)
+    end
+
+    return fs.combine(pwd, path)
+end
+
+shcompat.setDir = function(path)
+    pwd = path
+end
+
+function shcompat.getPath()
+    return binPaths
+end
+
+function shcompat.setPath(p)
+    binPaths = p
+end
+
+shcompat.resolveProgram = function(command)
+    if aliases[command] then
+        command = aliases[command]
+    end
+
+    if pathutils.isAbsolute(command) then
+        local fspath = fs.combine('', command)
+        if fs.exists(fspath) and not fs.isDir(fspath) then
+            return fspath
+        end
+
+        return nil
+    end
+
+    local paths = pathutils.splitPathString(binPaths)
+    for _, v in pairs(paths) do
+        v = fs.combine(shcompat.resolve(v), command)
+        if fs.exists(v) and not fs.isDir(v) then
+            return v
+        end
+    end
+
+    return nil
+end
+
+shcompat.dir = function()
+    return pwd
+end
+
+shcompat.run = function(command, ...)
+    local p = shcompat.resolveProgram(command)
+    if p then
+        table.insert(programStack, p)
+        local result = os.run({ shell = shcompat }, p, ...)
+        table.remove(programStack)
+        return result
+    end
+
+    print('Command not found: ' .. command)
+    return false
+end
+
+local run = true
+
+-- support loading as api
+-- bit hacky, should probably split into files, but this is simpler for now.
+if not shell or pathutils.namepart(shell.getRunningProgram()) ~= 'jhsh' then
+    run = false
+end
+
+shcompat.exit = function()
+    run = false
+end
+
+function shcompat.programs(includeHidden)
+    local items = { }
+    for _, v in pairs(pathutils.splitPathString(binPaths)) do
+        v = shcompat.resolve(v)
+        if fs.isDir(v) then
+            local list = fs.list(v)
+            for _, file in pairs(list) do
+                if not fs.isDir(fs.combine(v, file)) and 
+                    (includeHidden or not pathutils.isHidden(file)) then
+                    -- use filename as key so if we get duplicate names,
+                    -- they appear only once in the listing
+                    items[file] = true
+                end
+            end
+        end
+    end
+
+    local itemList = { }
+    for item, _ in pairs(items) do
+        table.insert(itemList, item)
+    end
+    table.sort(itemList)
+
+    return itemList
+end
+
+function shcompat.getRunningProgram()
+    if #programStack > 0 then
+        return programStack[#programStack]
+    end
+
+    return nil
+end
+
+function shcompat.aliases()
+    return aliases
+end
+
+function shcompat.setAlias(alias, command)
+    aliases[alias] = command
+end
+
+function shcompat.clearAlias(alias)
+    aliases[alias] = nil
+end
+
+jhsh = { }
+
+local cmdline = { }
+
+function cmdline:new(prefix)
+    local cmdline = { }
+    setmetatable(cmdline, self)
+    self.__index = self
+    self.prefix = prefix
+    self.xOffset = #self.prefix + 1
+    self.command = ''
+    self.x = 1
+    return cmdline
+end
+
+function cmdline:print()
+    write(self.prefix .. ' ' .. self.command)
+end
+
+function cmdline:move(x)
+    -- don't allow line to go past last part of command
+    if self.x + x > #self.command + 1 then
+        return
+    end
+
+    local newX = self.x + x 
+    
+    -- adjust moves so that we never move past the start
+    if newX < 1 then
+        x = (self.x - 1) * -1
+        newX = self.x + x
+    end
+
+    self.x = newX
+
+    local x, y = term.getCursorPos()
+    term.setCursorPos(self.x + self.xOffset, y)
+end
+
+function cmdline:redraw()
+    term.clearLine()
+    local x, y = term.getCursorPos()
+    term.setCursorPos(1, y)
+    self:print()
+    term.setCursorPos(self.xOffset + self.x, y)
+end
+
+function cmdline:erase()
+    -- can't erase if at start
+    if self.x == 1 then
+        return
+    end
+
+    local p1 = string.sub(self.command, 1, self.x - 2)
+    local p2 = string.sub(self.command, self.x)
+
+    self.command = p1 .. p2
+    self:move(-1)
+    self:redraw()
+end
+
+function cmdline:append(text)
+    if self.x > #self.command then
+        -- if beyond the last char, we can just append to the end
+        self.command = self.command .. text
+    else
+        -- otherwise need to split at cursor pos and insert in between
+        local p1 = string.sub(self.command, 1, self.x - 1)
+        local p2 = string.sub(self.command, self.x)
+
+        self.command = p1 .. text .. p2
+    end
+
+    self.x = self.x + #text
+    self:redraw()
+end
+
+function cmdline:setCommand(cmd)
+    self.command = cmd
+    self.x = #self.command + 1
+end
+
+function cmdline:getCommand()
+    return self.command
+end
+
+jhsh.cmdline = cmdline
+
+local history = { }
+
+-- if pwd came from default shell, it's not in correct format
+pwd = pathutils.normalizeAbsolutePath(pwd)
+
+while run do
+    local ret = false
+    local line = cmdline:new(pwd .. '>')
+    local historyIdx = #history + 1
+    line:print()
+    term.setCursorBlink(true)
+    -- This reads keys in a similar way as read(), but supports
+    -- getting key events such as tab key
+    while not ret do
+        local e, v = os.pullEvent()
+        -- we only care about key and char
+        if e == 'key' then
+            if v == KEYS.ENTER then
+                ret = true
+                write("\n")
+            elseif v == KEYS.BACKSPACE then
+                line:erase()
+            elseif v == KEYS.LEFT then
+                line:move(-1)
+            elseif v == KEYS.RIGHT then
+                line:move(1)
+            elseif v == KEYS.UP then
+                -- only change if we aren't at the last item
+                if historyIdx > 1 then
+                    historyIdx = historyIdx - 1
+                    line:setCommand(history[historyIdx])
+                    line:redraw()
+                end
+            elseif v == KEYS.DOWN then
+                -- only has an effect if we aren't at the last item already
+                if historyIdx ~= #history + 1 then
+                    historyIdx = historyIdx + 1
+                    if history[historyIdx] then
+                        line:setCommand(history[historyIdx])
+                    else
+                        line:setCommand('')
+                    end
+                    line:redraw()
+                end
+            elseif v == KEYS.TAB then
+                local cmd = line:getCommand()
+                local split = { }
+                for m in string.gmatch(cmd, '[^ \t]+') do
+                    table.insert(split, m)
+                end
+
+                local last = split[#split]
+                if last then
+                    local opts = nil
+                    -- if the item is a dir and doesn't end in a /, just expand the /
+                    if fs.isDir(shcompat.resolve(last)) and string.sub(last, -1) ~= '/' then
+                        opts = { last .. '/' }
+                    else
+                        -- otherwise full globbing
+                        opts = pathutils.expand(pwd, escapeForPattern(last) .. '*')
+                    end
+
+                    if #opts == 1 then
+                        -- since expand results are always absolute, remove current pwd
+                        -- from result if command is not absolute
+                        local expandedCmd = opts[1]
+                        if not pathutils.isAbsolute(last) then
+                            expandedCmd = string.gsub(opts[1], '^' .. pwd .. '/', '')
+                        end
+
+                        line:setCommand(string.sub(cmd, 1, #cmd - #last) .. expandedCmd)
+                        line:redraw()
+                    elseif #opts > 1 then
+                        write('\n')
+                        local list = { }
+                        for _, v in ipairs(opts) do
+                            table.insert(list, pathutils.namepart(v))
+                        end
+
+                        print(textutils.tabulate(list))
+                        line:print()
+                    end
+                end
+            else
+                --print(v)
+            end
+        elseif e == 'char' then
+            line:append(v)
+        end
+    end
+
+    term.setCursorBlink(false)
+    local cmd = line:getCommand()
+    table.insert(history, cmd)
+
+    -- get any output redirection
+    -- using gsub to match and replace
+    local out = ''
+    local outMode = ''
+    cmd = string.gsub(cmd, '(>>?) ?([A-Za-z0-9_./]+)', function(mode, path)
+        -- currently only support one output redirection so if there's
+        -- more than one, just replace the old one
+        out = path
+        outMode = mode
+        return ''
+    end)
+
+    local parts = { }
+    -- put each part in a table so we get the command and any args,
+    -- and can also try expanding them for globbing
+    for m in string.gmatch(cmd, '[^ \t]+') do
+        local expandResult = pathutils.expand(pwd, m)
+        if #expandResult == 0 then
+            table.insert(parts, m)
+        else
+            for i = 1, #expandResult do
+                table.insert(parts, expandResult[i])
+            end
+        end
+    end
+
+    if parts[1] then
+        if out ~= '' then
+            out = shcompat.resolve(out)
+
+            -- open file for output redirection in the expected mode
+            local outfile = nil
+            if outMode == '>' then
+                outfile = fs.open(out, 'w')
+            elseif outMode == '>>' then
+                outfile = fs.open(out, 'a')
+            elseif outMode ~= '' then
+                error('Unexpected output redirection operator "' .. outMode .. '"')
+            end
+
+            -- replace write with a function which outputs into the file
+            local oldWrite = write
+            local envWrite = getfenv()
+            envWrite.write = function(text)
+                outfile.write(text)
+                return 0
+            end
+
+            -- replace env for print so it uses the correct write
+            setfenv(print, envWrite)
+
+            shcompat.run(parts[1], unpack(parts, 2))
+
+            -- put old printing function back and dump output into file
+            envWrite.write = oldWrite
+            setfenv(print, envWrite)
+
+            outfile.close()
+        else
+            shcompat.run(parts[1], unpack(parts, 2))
+        end
+    end
+end
