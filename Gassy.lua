@@ -33,8 +33,6 @@ function Gassy.init(num, panic)
 	Gassy.fuel()
 
 	if panic ~= nil then
-		print("Setting panic")
-		print(panic)
 		Gassy.panic = panic
 	end
 end
