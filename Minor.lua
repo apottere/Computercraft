@@ -1,10 +1,11 @@
 print("Loading Minor... ")
+Minor = {}
+
 Deps.needs("Enderage")
 Deps.needs("Gassy")
 Deps.needs("Turtles")
 Deps.needs("Panic")
 
-Minor = {}
 Minor.output = nil
 Minor.gas = nil
 
@@ -55,7 +56,7 @@ end
 function Minor:safeMine(dir)
 	if Turtles.detect(dir) then
 		self:possibleEmpty()
-		return Turtles.move(dir)
+		return Turtles.dig(dir)
 	else
 		return true
 	end
@@ -90,7 +91,7 @@ function Minor:lineDown(x)
 end
 
 function Minor:square(l, w, mod)
-	if not mod == 1 then
+	if mod ~= 1 then
 		mod = 0
 	end
 
@@ -111,19 +112,23 @@ function Minor:square(l, w, mod)
 end
 
 function Minor:cube(l, w, h)
-	local mod = 1
+	local mod = 0
 
 	for i=1, h do
 
-		if mod == 1 then
-			mod = 0
-		else
-			mod = 1
-		end
-
 		self:square(l, w, mod)
 		if i < h then
+			if w % 2 == 0 then
+				if mod == 0 then
+					mod = 1
+				else
+					mod = 0
+				end
+			end
+
 			self:lineDown(1)
+			Gassy.turnLeft()
+			Gassy.turnLeft()
 		end
 	end
 end

@@ -1,6 +1,6 @@
 print("Loading Crafty...")
-
 Crafty = {}
+
 Crafty.table = { nil, nil, nil,
 				nil, nil, nil,
 				nil, nil, nil

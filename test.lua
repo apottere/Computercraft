@@ -1,5 +1,7 @@
-dir = "/Window"
+Test = {}
 
-dofile(dir.."/Window.lua")
-
-win = Window:new("right")
+function Test.test()
+	print(shell)
+	print(turtle)
+	shell.run("ls")
+end

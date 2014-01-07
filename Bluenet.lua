@@ -1,6 +1,6 @@
 print("Loading Bluenet...")
-
 Bluenet = {}
+
 
 function Bluenet:respond(message, id, rmessage)
 	if not message or not rmessage then

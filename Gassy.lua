@@ -1,6 +1,9 @@
 print("Loading Gassy... ")
-
 Gassy = {}
+
+Deps.needs("Enderage")
+Deps.needs("Panic")
+
 Gassy.ender = nil
 Gassy.level = 0
 Gassy.waypoints = {{0, 0, 0, 0}}
@@ -29,7 +32,9 @@ function Gassy.init(num, panic)
 	Gassy.ender = Enderage.new(Enderage, num, num)
 	Gassy.fuel()
 
-	if not panic == nil then
+	if panic ~= nil then
+		print("Setting panic")
+		print(panic)
 		Gassy.panic = panic
 	end
 end
@@ -159,7 +164,6 @@ end
 
 function Gassy.go(x, y, z)
 
-	print("Going to ("..x..", "..y..", "..z..")")
 
 	if Gassy.x - x > 0 then
 		Gassy.turn(3)

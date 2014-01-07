@@ -1,6 +1,6 @@
 print("Loading Window... ")
-
 Window = {}
+
 Window.mon = nil
 
 function Window:new(side)

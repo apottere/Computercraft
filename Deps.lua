@@ -1,17 +1,35 @@
 print("Loading Deps... ")
-
 Deps = {}
 
+dofile("/get")
+
+Deps.loaded = {}
+Deps.loaded["Get"] = true
+
+
 function Deps.needs(module)
-	if _G[module] == nil then
+	if Deps.loaded[module] == nil or Deps.loaded[module] == false then
+		print("->Deps: Loading module " .. module .. ".")
+		Deps.loaded[module] = true
 		Deps.load(module)
+	else
+		print("->Deps: Ignoring module " .. module .. ".")
 	end
 end
 
-function Deps.clean()
+function Deps.unload()
 	if fs.exists("/deps") then
 		fs.delete("/deps")
 	end
+
+	for i,v in ipairs(Deps.loaded) do
+		_G[v] = nil
+		loadstring(v .. " = nil")()
+	end
+
+	dofile("/get")
+	Deps.loaded = {}
+	Deps.loaded["Get"] = true
 end
 
 function Deps.load(module)
@@ -23,12 +41,9 @@ function Deps.load(module)
 		end
 	end
 
-	print("  ->Deps loading " .. module .. "..." )
 	local filename = module .. ".lua"
 	if not fs.exists('/deps/' .. filename) then
-		print("Calling run.")
-		shell.run("/get", "file " .. filename .. " /deps")
-		print("Called run.")
+		Get.main("file", filename, "/deps")
 	end
 
 	if not fs.exists('/deps/' .. filename) then

@@ -1,7 +1,8 @@
 print("Loading Enderage... ")
+Enderage = {}
+
 Deps.needs("Panic")
 
-Enderage = {}
 Enderage.item = 0
 Enderage.chest = 0
 Enderage.pullFunc = nil

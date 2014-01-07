@@ -1,6 +1,6 @@
 print("Loading Cons... ")
-
 Cons = {}
+
 
 function Cons.fullBuilding(stone, glass, n)
 	Cons.buildFrom(stone, glass, 1, n)

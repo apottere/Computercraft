@@ -1,7 +1,8 @@
 print("Loading Turtles...")
+Turtles = {}
+
 Deps.needs("Gassy")
 
-Turtles = {}
 Turtles.forward = nil
 Turtles.up = 2
 Turtles.down = 3
@@ -49,7 +50,7 @@ function Turtles.dig(dir)
 end
 
 function Turtles.detect(dir)
-	return Turtles.action(Turtles.detect, dir)
+	return Turtles.action(Turtles.detectSet, dir)
 end
 
 function Turtles.attack(dir)
@@ -63,6 +64,10 @@ end
 function Turtles.determine(dir)
 	if dir == nil then
 		return 1
+	elseif dir == "up" then
+		return 2
+	elseif dir == "down" then
+		return 3
 	else
 		return dir
 	end
