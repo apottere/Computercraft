@@ -1,4 +1,4 @@
-print("--Loading Bluenet v0.1--")
+print("Loading Bluenet...")
 
 Bluenet = {}
 
@@ -109,7 +109,7 @@ function Bluenet:open()
 	if not status then
 		error("Bluenet: No wireless modem!")
 	else
-		print("--Bluenet loaded! (side: "..sides[n]..")--")
+		print("Finished Bluenet load. (side: "..sides[n]..")--")
 	end
 
 end

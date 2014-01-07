@@ -25,6 +25,11 @@ print()
 if tArgs[1] == "file" then
 	-- Determine file to download
 	local sFile = tArgs[2]
+	local path = tArgs[3]
+
+	if path == nil then
+		path = ""
+	end
 
 	-- GET the contents from pastebin
 	print( "-Get "..hostname.."-" )
@@ -41,9 +46,10 @@ if tArgs[1] == "file" then
 
 			response.close()
 
-			write( "\t-Saving as \""..sFile.."\".. " )
+			local fqp = path .. "/" .. sFile
+			write( "\t-Saving as \""..fqp.."\".. " )
 
-			local sPath = shell.resolve( sFile )
+			local sPath = shell.resolve( fqp )
 			if fs.exists( sPath ) then
 				fs.delete( sPath )
 			end

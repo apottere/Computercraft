@@ -1,4 +1,5 @@
-write("Loading Enderage module... ")
+print("Loading Enderage... ")
+Deps.needs("Panic")
 
 Enderage = {}
 Enderage.item = 0
@@ -163,4 +164,4 @@ function Enderage:store(itr)
 	self:clean()
 end
 
-print("Done.")
+print("Finished Enderage load.")

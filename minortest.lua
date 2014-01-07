@@ -1,12 +1,10 @@
-dofile("/Enderage.lua")
-dofile("/Gassy.lua")
-dofile("/Panic.lua")
-dofile("/Minor.lua")
+dofile("/Deps.lua")
+Deps.needs("Minor")
+Deps.needs("Enderage")
 
 output = Enderage:newOutput(15)
 
 m = Minor:new(output, 16)
 
-m:cube(52, 55, 20)
---m:cube(3, 3, 2)
+m:cube(3, 3, 4)
 m:empty()

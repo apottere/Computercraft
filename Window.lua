@@ -1,4 +1,4 @@
-write("Loading Window module... ")
+print("Loading Window... ")
 
 Window = {}
 Window.mon = nil
@@ -28,4 +28,4 @@ function Window:test(string)
 	self.mon.write(string)
 end
 
-print("Done.")
+print("Finished Window load.")

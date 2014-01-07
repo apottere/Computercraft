@@ -1,3 +1,5 @@
+print("Loading Panic...")
+
 Panic = {}
 
 
@@ -24,3 +26,5 @@ function Panic.panic(str)
 		end
 	end
 end
+
+print("Finished Panic load.")

@@ -1,4 +1,4 @@
-print("---Loading Crafty module---")
+print("Loading Crafty...")
 
 Crafty = {}
 Crafty.table = { nil, nil, nil,
@@ -400,4 +400,4 @@ function Crafty:turn(s)
 
 end
 
-print("---Loaded Crafty v1.0---")
+print("Finished Crafty v1.0 load.")

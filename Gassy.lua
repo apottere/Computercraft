@@ -1,4 +1,4 @@
-write("Loading Gassy module... ")
+print("Loading Gassy... ")
 
 Gassy = {}
 Gassy.ender = nil
@@ -8,6 +8,8 @@ Gassy.dir = 0
 Gassy.x = 0
 Gassy.y = 0
 Gassy.z = 0
+
+Gassy.panic = true
 
 
 function Gassy.dump()
@@ -23,9 +25,13 @@ function Gassy.dump()
 	end
 end
 
-function Gassy.init(num)
+function Gassy.init(num, panic)
 	Gassy.ender = Enderage.new(Enderage, num, num)
 	Gassy.fuel()
+
+	if not panic == nil then
+		Gassy.panic = panic
+	end
 end
 
 function Gassy.fuel()
@@ -72,20 +78,12 @@ function Gassy.turnLeft()
 	Gassy.turn((Gassy.dir - 1) % 4)
 end
 
-function Gassy.tryForward()
-	return Gassy.forward(1, false)
-end
-
-function Gassy.forward(n, panic)
+function Gassy.forward(n)
 	if n == nil then
 		n = 1
 	end
 
-	if panic == nil then
-		panic = true
-	end
-
-	if Gassy.move(turtle.forward, n, panic) then
+	if Gassy.move(turtle.forward, n) then
 
 		if Gassy.dir % 2 == 0 then
 			if Gassy.dir == 0 then
@@ -112,8 +110,13 @@ function Gassy.up(n)
 		n = 1
 	end
 
-	Gassy.move(turtle.up, n)
-	Gassy.z = Gassy.z + n
+	if Gassy.move(turtle.up, n) then
+		Gassy.z = Gassy.z + n
+
+		return true
+	else
+		return false
+	end
 end
 
 function Gassy.down(n)
@@ -121,20 +124,21 @@ function Gassy.down(n)
 		n = 1
 	end
 
-	Gassy.move(turtle.down, n)
-	Gassy.z = Gassy.z - n
+	if Gassy.move(turtle.down, n) then
+		Gassy.z = Gassy.z - n
+		
+		return true
+	else
+		return false
+	end
 end
 
-function Gassy.move(func, n, panic)
-	if panic == nil then
-		panic = true
-	end
-
+function Gassy.move(func, n)
 	if Gassy.level <= 5120 then
 		Gassy.fuel()
 	end
 
-	if panic then
+	if Gassy.panic then
 		for i=1, n do
 			while not func() do
 				Panic.panic("Path is blocked!")
@@ -215,4 +219,4 @@ function Gassy.go_point()
 	Gassy.turn(0)
 end
 
-print("Done.")
+print("Finished Gassy load.")

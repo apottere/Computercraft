@@ -1,4 +1,4 @@
-write("Loading Cons module... ")
+print("Loading Cons... ")
 
 Cons = {}
 
@@ -235,4 +235,4 @@ function Cons.eLine(l, e)
 	end
 end
 
-print("Done.")
+print("Finished Cons load.")
