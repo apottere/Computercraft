@@ -16,7 +16,7 @@ end
 flag = false
 time = 0.2
 falltime = 1
-controlid = 96
+controlid = 18
 rednet.open("right")
 print("Cycling...")
 pistons(true)

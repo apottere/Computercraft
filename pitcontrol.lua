@@ -1,12 +1,21 @@
 --books = { 1="Dome" }
 
-books = {"Let me out!", "Hub World", "Relik's House", "Relik World", "Kody", "Oz Shore", "Oz Jungle", "Farm", "Door", "Cavern", "Maintenance"}
+
+books = {
+	"Let me out!",
+	"Andy's Magic Island",
+	"Order of Rose Aflame",
+	"Oz",
+	"Rody",
+	"RockPtarmargiman",
+	"Christina",
+}
 book_max = table.getn(books)
 
 latest = {}
 
 rednet.open("back")
-pitid = 93
+pitid = 16
 selected = 1
 ready = false
 go_color = colors.red
@@ -16,6 +25,7 @@ function init()
 	sign = peripheral.wrap("left")
 	sign.setBackgroundColor(colors.black)
 	print_sign(colors.red)
+	sleep(5)
 	rednet.send(pitid, "1")
 	
 	disp = peripheral.wrap("top")
@@ -147,7 +157,7 @@ while true do
 	
 	elseif event == "rednet_message" then
 
-		if (click == 93 and x == "ready") then
+		if (click == pitid and x == "ready") then
 			ready = true
 			print_sign(colors.lime)
 			go_color = colors.lime
