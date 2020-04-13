@@ -1,8 +1,8 @@
 Get = {}
 
 function Get.main(action, name, location)
-	hostname="http://modelofnothing.com"
-	page="/pastebin"
+	hostname="http://modelofnothing.com:81"
+	page="/Andy/paste/paste.php"
 
 	local function printUsage()
 		print( "Usages:" )

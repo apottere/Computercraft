@@ -1,4 +1,6 @@
 print("Loading Cons... ")
+Deps.needs("Gassy")
+Deps.needs("Panic")
 Cons = {}
 
 
